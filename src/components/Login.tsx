@@ -7,6 +7,7 @@ import { useAppDispatch, useAppSelector } from "@/store/hooks";
 import { setSession } from "@/store/slices/authSlice";
 import { demoUserForRole } from "@/lib/demo";
 import type { Role } from "@/lib/dummy-data";
+import { WalletConnectButton } from "./WallectConnectButton";
 
 interface RoleOption {
   role: Role;
@@ -129,7 +130,7 @@ export default function Login() {
         )}
 
         <div className="mt-8 flex flex-col items-center gap-2">
-        <button className='cursor-default rounded-2xl border border-zinc-700 bg-zinc-900/60 px-6 py-3.5 text-sm font-medium text-zinc-400'>Connect Wallet</button>
+          <WalletConnectButton />
           <p className="text-xs text-zinc-600">
             Wallet integration (wagmi + RainbowKit) — student exercise
           </p>

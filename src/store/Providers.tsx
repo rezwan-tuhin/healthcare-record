@@ -2,7 +2,12 @@
 
 import { Provider } from "react-redux";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { WagmiProvider } from "wagmi";
+import { wagmiConfig } from "@/lib/wagmi";
 import { store } from "./store";
+import { WalletBridge } from "@/components/Walletbridge";
+import {darkTheme, RainbowKitProvider } from "@rainbow-me/rainbowkit";
+import '@rainbow-me/rainbowkit/styles.css';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -15,10 +20,22 @@ const queryClient = new QueryClient({
 
 export function Providers({ children }: { children: React.ReactNode }) {
   return (
-      <QueryClientProvider client={queryClient}>
+      
+        <WagmiProvider config={wagmiConfig}>
+        <QueryClientProvider client={queryClient}>
+      <RainbowKitProvider theme={darkTheme({
+        accentColor: '#10b981',
+        accentColorForeground: 'white',
+        borderRadius: 'medium'
+
+      })}>
       <Provider store={store}>
+        <WalletBridge />
         {children}
       </Provider>
+      </RainbowKitProvider>
     </QueryClientProvider>
+      </WagmiProvider>
+
   );
 }

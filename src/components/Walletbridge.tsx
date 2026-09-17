@@ -29,6 +29,8 @@ export function WalletBridge() {
             connectWallet({address, provider: connector?.name ?? "unknown"}),
         );
 
+        dispatch(resolveAuth(address));
+
     },[address, connector, authAddress, isAuthenticated, dispatch]);
 
     return null;
