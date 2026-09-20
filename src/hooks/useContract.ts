@@ -1,8 +1,10 @@
+'use client'
+
 import { useReadContract } from "wagmi";
 import { useAccount, useChainId } from "wagmi";
 import type { Address } from "viem";
 import { abi } from "@/lib/abi";
-import { contractAddress, contractChainId } from "@/lib/contract";
+import { contractAddress, contractChainId, isContractConfigured } from "@/lib/contract";
 
 
 export function useChainStatus() {
@@ -24,7 +26,7 @@ export function usePatientOnChain(address?: string) {
         abi: abi,
         functionName: "patients",
         args: address ? [address as Address] : undefined,
-        query: {enabled: !!address}
+        query: {enabled: isContractConfigured() && !!address}
      })
 }
 
@@ -34,7 +36,7 @@ export function useProviderOnChain(address? : string) {
         abi: abi,
         functionName: 'providers',
         args: address ? [address as Address] : undefined,
-        query: {enabled: !!address}
+        query: {enabled: isContractConfigured() && !!address}
     })
 }
 
@@ -44,7 +46,23 @@ export function useHasValidAccess (patient?: string, accessor?: string) {
         abi: abi,
         functionName: 'hasValidAccess',
         args: patient && accessor ? [patient as Address, accessor as Address] : undefined,
-        query: {enabled: !!patient && !!accessor}
+        query: {enabled: isContractConfigured() && !!patient && !!accessor}
     })
 }
 
+
+export function useRecordAnchor(patient?: string, recordId?: string) {
+
+}
+
+export function useEmergencySession(address?: string) {
+    
+}
+
+export function useVerifyRecordHash(patient?: string, recordId?: string, candidateHash?: string) {
+
+}
+
+export function useHasRole(role: `0x${string}`, address?: string) {
+    
+}

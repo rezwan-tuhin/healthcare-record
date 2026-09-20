@@ -1,122 +1,114 @@
-/**
- * On-chain operations seam.
- *
- * Every call here is a TODO(wagmi): replace the throwing stub with the
- * corresponding `useWriteContract`/`useReadContract` call against the deployed
- * HealthRecordSystem contract (see `src/lib/contract.sol` and tutorial.md
- * Phase 2). The UI already wraps these so that a `ChainNotWiredError` degrades
- * gracefully to a warning banner while the API (DB metadata) still succeeds.
- */
-export class ChainNotWiredError extends Error {
-  constructor(operation: string) {
-    super(`[chain] not wired: ${operation}. Implement with wagmi/useWriteContract.`);
-    this.name = "ChainNotWiredError";
+import {getAccount, 
+  getChainId, 
+  waitForTransactionReceipt, 
+  writeContract} from "wagmi/actions";
+  import { wagmiConfig } from "./wagmi";
+  import { abi } from "./abi";
+  import { contractAddress, contractChainId, isContractConfigured } from "./contract";
+
+
+  export class ChainNotWiredError extends Error {
+    constructor(operation: string, detail?: string) {
+      super(`chain not wired: ${operation}${detail ? `-${detail}` : ""}`);
+      this.name = "ChainNotWired";
+    }
   }
-}
 
-export interface ChainResult {
-  transactionHash: string | null;
-  ok: boolean;
-}
+  export interface ChainResult {
+    transactionHash: string | null;
+    ok: boolean;
+  }
 
-const notWired = (label: string): never => {
-  throw new ChainNotWiredError(label);
-};
+  function requireWrite(operation: string): void {
+    if(!isContractConfigured()) {
+      throw new ChainNotWiredError(operation, "NEXT_PUBLIC_CONTRACT_ADDRESS  is not configured");
+    }
+    const account = getAccount(wagmiConfig);
+    if(!account.address) {
+      throw new ChainNotWiredError(operation, "No wallet connected");
+    }
+    const chainId = getChainId(wagmiConfig);
+    if(chainId !== contractChainId) {
+      throw new ChainNotWiredError(operation, `Connected to ${chainId}, expected ${contractChainId}`);
+    }
+  }
 
-export interface RegisterPatientInput {
-  address: string;
-  didURI: string;
-}
+  function requireSignerMatch(operation: string, given: string): void {
+    const account = getAccount(wagmiConfig);
+    if(account.address?.toLowerCase() !== given.toLowerCase()) {
+      throw new ChainNotWiredError(operation, "This contract function uses msg.snder - connect the wallet that owns the address");
+    }
+  }
 
-export interface RegisterProviderInput {
-  address: string;
-  name: string;
-  didURI: string;
-}
 
-export interface VerifyProviderInput {
-  address: string;
-  isVerified: boolean;
-  erQualified: boolean;
-}
+  async function confirm(operation: string, write: () => Promise<`0x${string}`>) {
+    const hash = await write();
+    const receipt = await waitForTransactionReceipt(wagmiConfig, {hash});
+     if(receipt.status !== "success") {
+      throw new Error(`chain ${operation}: transaction reverted`);
+     }
 
-export interface GrantConsentInput {
-  patientAddress: string;
-  providerAddress: string;
-  purpose: string;
-  expiresAt: number;
-}
+     return {ok: true, transactionHash: hash}
+  }
 
-export interface RevokeConsentInput {
-  patientAddress: string;
-  providerAddress: string;
-}
 
-export interface AnchorRecordInput {
-  patientAddress: string;
-  recordId: string;
-  recordHash: string;
-  pointer: string;
-}
+  export interface RegisterPatientInput {
+    address: string;
+    didURI: string;
+  }
 
-export interface TombstoneRecordInput {
-  patientAddress: string;
-  recordId: string;
-}
+  export interface RegisterProviderInput {
+    address: string;
+    didURI: string;
+  }
 
-export interface TriggerEmergencyAccessInput {
-  patientAddress: string;
-  doctorAddress: string;
-  justification: string;
-  validUntil: number;
-}
+  export interface VerifyProviderInput {
+    address: string;
+    isVerified: boolean;
+    eqQualifed: boolean;
+  }
 
-export interface ExpireEmergencyAccessInput {
-  patientAddress: string;
-}
+  export interface GrantConsentInput {
+    patientAddress: string;
+    providerAddress: string;
+  }
 
-// Each function mirrors a contract function:
-//   registerPatient(address, didURI)
-export async function chainRegisterPatient(input: RegisterPatientInput): Promise<ChainResult> {
-  return notWired(`registerPatient(address, didURI) for ${input.address}`);
-}
+  export interface RevokeConsentInput {
+    patientAddress: string;
+    providerAddress: string;
+  }
 
-//   registerProvider(address, name, didURI)
-export async function chainRegisterProvider(input: RegisterProviderInput): Promise<ChainResult> {
-  return notWired(`registerProvider(name=${input.name}, address=${input.address})`);
-}
+  export interface AnchorRecordInput {
+    patientAddress: string;
+    recordId: string;
+    recordHash: string;
+    pointer: string;
+  }
 
-//   verifyProvider(address, isVerified, isERQualified) — REGULATOR_ROLE only
-export async function chainVerifyProvider(input: VerifyProviderInput): Promise<ChainResult> {
-  return notWired(`verifyProvider(address=${input.address}, verified=${input.isVerified})`);
-}
+  export interface TombstoneRecordInput {
+    patientAddress: string;
+    recordId: string;
+  }
 
-//   grantConsent(patient, provider, purpose, expiresAt)
-export async function chainGrantConsent(input: GrantConsentInput): Promise<ChainResult> {
-  return notWired(`grantConsent(${input.patientAddress} -> ${input.providerAddress})`);
-}
+  export interface EmergencyAccessInput {
+    patientAddress: string;
+    dcotorAddress: string;
+    justification: string;
+    validUntil: number;
+  }
 
-//   revokeConsent(patient, provider)
-export async function chainRevokeConsent(input: RevokeConsentInput): Promise<ChainResult> {
-  return notWired(`revokeConsent(${input.patientAddress} -> ${input.providerAddress})`);
-}
 
-//   anchorRecord(patient, recordId, recordHash, ipfsCid)
-export async function chainAnchorRecord(input: AnchorRecordInput): Promise<ChainResult> {
-  return notWired(`anchorRecord(${input.patientAddress} recordId=${input.recordId})`);
-}
+  export async function chainRegisterPatient(input: RegisterPatientInput):Promise<ChainResult> {
+    const op = "registerPatient(address, didURI)";
+    requireWrite(op);
+    requireSignerMatch(op, input.address);
 
-//   tombstoneRecord(patient, recordId)
-export async function chainTombstoneRecord(input: TombstoneRecordInput): Promise<ChainResult> {
-  return notWired(`tombstoneRecord(${input.patientAddress} recordId=${input.recordId})`);
-}
-
-//   triggerEmergencyAccess(patient, doctor, justification, validUntil)
-export async function chainTriggerEmergencyAccess(input: TriggerEmergencyAccessInput): Promise<ChainResult> {
-  return notWired(`triggerEmergencyAccess(${input.patientAddress} by ${input.doctorAddress})`);
-}
-
-//   expireEmergencyAccess(patient)
-export async function chainExpireEmergencyAccess(input: ExpireEmergencyAccessInput): Promise<ChainResult> {
-  return notWired(`expireEmergencyAccess(${input.patientAddress})`);
-}
+    return confirm(op, () =>
+      writeContract(wagmiConfig, {
+        address: contractAddress, 
+        abi: abi,
+        functionName: 'registerPatient',
+        args: [input.didURI],
+      })
+    );
+  }
